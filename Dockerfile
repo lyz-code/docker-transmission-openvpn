@@ -1,4 +1,4 @@
-FROM ubuntu:16.04
+FROM resin/rpi-raspbian:stretch
 MAINTAINER Kristian Haugene
 
 VOLUME /data
@@ -7,34 +7,25 @@ VOLUME /config
 # Update packages and install software
 RUN apt-get update \
     && apt-get -y upgrade \
-    && apt-get -y install software-properties-common wget git \
-    && add-apt-repository ppa:transmissionbt/ppa \
-    && wget -O - https://swupdate.openvpn.net/repos/repo-public.gpg | apt-key add - \
-    && echo "deb http://build.openvpn.net/debian/openvpn/stable xenial main" > /etc/apt/sources.list.d/openvpn-aptrepo.list \
-    && apt-get update \
-    && apt-get install -y sudo transmission-cli transmission-common transmission-daemon curl rar unrar zip unzip ufw iputils-ping openvpn \
-    python2.7 python2.7-pysqlite2 && ln -sf /usr/bin/python2.7 /usr/bin/python2 \
+    && apt-get -y install transmission-cli transmission-common transmission-daemon \
+    && apt-get install -y dumb-init unzip openvpn curl ufw wget git \
     && wget https://github.com/Secretmapper/combustion/archive/release.zip \
     && unzip release.zip -d /opt/transmission-ui/ \
     && rm release.zip \
+    && git clone git://github.com/endor/kettu.git /opt/transmission-ui/kettu \
     && wget https://github.com/ronggang/twc-release/raw/master/src.tar.gz \
     && mkdir /opt/transmission-ui/transmission-web-control \
     && tar -xvf src.tar.gz -C /opt/transmission-ui/transmission-web-control/ \
     && rm src.tar.gz \
-    && git clone git://github.com/endor/kettu.git /opt/transmission-ui/kettu \
-    && apt-get install -y tinyproxy telnet \
-    && wget https://github.com/Yelp/dumb-init/releases/download/v1.2.0/dumb-init_1.2.0_amd64.deb \
-    && dpkg -i dumb-init_1.2.0_amd64.deb \
-    && rm -rf dumb-init_1.2.0_amd64.deb \
-    && curl -L https://github.com/jwilder/dockerize/releases/download/v0.5.0/dockerize-linux-amd64-v0.5.0.tar.gz | tar -C /usr/local/bin -xzv \
     && apt-get clean && rm -rf /var/lib/apt/lists/* /tmp/* /var/tmp/* \
+    && curl -L https://github.com/jwilder/dockerize/releases/download/v0.6.0/dockerize-linux-armhf-v0.6.0.tar.gz | tar -C /usr/local/bin -xzv \
     && groupmod -g 1000 users \
     && useradd -u 911 -U -d /config -s /bin/false abc \
     && usermod -G users abc
 
+# Add configuration and scripts
 ADD openvpn/ /etc/openvpn/
 ADD transmission/ /etc/transmission/
-ADD tinyproxy /opt/tinyproxy/
 
 ENV OPENVPN_USERNAME=**None** \
     OPENVPN_PASSWORD=**None** \
@@ -116,9 +107,9 @@ ENV OPENVPN_USERNAME=**None** \
     ENABLE_UFW=false \
     UFW_ALLOW_GW_NET=false \
     UFW_EXTRA_PORTS= \
-    TRANSMISSION_WEB_UI= \
-    PUID= \
-    PGID= \
+    TRANSMISSION_WEB_UI=\
+    PUID=\
+    PGID=\
     TRANSMISSION_WEB_HOME= \
     DROP_DEFAULT_ROUTE= \
     WEBPROXY_ENABLED=false \
@@ -126,5 +117,4 @@ ENV OPENVPN_USERNAME=**None** \
 
 # Expose port and run
 EXPOSE 9091
-EXPOSE 8888
 CMD ["dumb-init", "/etc/openvpn/start.sh"]
